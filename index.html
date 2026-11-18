@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estadísticas de ediciones</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f3f0;
+  --surface-1: #fcfcfb;
+  --border: #dddcd6;
+  --grid: #e8e7e2;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #77766f;
+  --accent: #2a78d6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --otros: #b5b4ad;
+  --pos: #2a78d6;
+  --neg: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #111110;
+    --surface-1: #1a1a19;
+    --border: #383835;
+    --grid: #2a2a28;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #94938a;
+    --accent: #3987e5;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
+    --otros: #5c5b56;
+    --pos: #3987e5;
+    --neg: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #111110;
+  --surface-1: #1a1a19;
+  --border: #383835;
+  --grid: #2a2a28;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #94938a;
+  --accent: #3987e5;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
+  --otros: #5c5b56;
+  --pos: #3987e5;
+  --neg: #e66767;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+main { max-width: 1280px; margin: 0 auto; padding: 16px; }
+header h1 { font-size: 22px; margin: 4px 0 2px; }
+header p { margin: 0 0 12px; color: var(--text-secondary); }
+a { color: var(--accent); }
+.panel {
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 14px; min-width: 0;
+}
+.panel h2 { font-size: 15px; margin: 0 0 10px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.panel h2 small { font-weight: normal; color: var(--text-muted); font-size: 12px; }
+.filtros { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; }
+.campo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.campo > span { font-size: 12px; color: var(--text-secondary); }
+input, select, button {
+  font: inherit; color: var(--text-primary); background: var(--surface-1);
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
+}
+button { cursor: pointer; }
+button:hover { border-color: var(--text-muted); }
+.segmentado { display: inline-flex; max-width: 100%; border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; }
+.segmentado button { white-space: nowrap; }
+.segmentado button { border: 0; border-radius: 0; border-right: 1px solid var(--border); }
+.segmentado button:last-child { border-right: 0; }
+.segmentado button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.casillas { display: flex; gap: 10px; flex-wrap: wrap; padding: 5px 0; }
+.casillas label { display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+details.desplegable { position: relative; }
+details.desplegable summary {
+  list-style: none; cursor: pointer; border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 8px; background: var(--surface-1); white-space: nowrap;
+}
+details.desplegable summary::-webkit-details-marker { display: none; }
+details.desplegable[open] .lista {
+  position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 260px; max-height: 360px;
+  overflow: auto; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
+}
+.lista label { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
+.lista .acciones { display: flex; gap: 6px; margin-bottom: 6px; }
+.lista .acciones button { padding: 2px 8px; font-size: 12px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border);
+  border-radius: 999px; padding: 2px 4px 2px 10px; font-size: 13px;
+}
+.chip button { border: 0; padding: 0 6px; background: none; color: var(--text-muted); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.tile .etq { font-size: 12px; color: var(--text-secondary); }
+.tile .val { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tile .sub { font-size: 12px; color: var(--text-muted); }
+.rejilla { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 14px; }
+@media (max-width: 900px) { .rejilla { grid-template-columns: minmax(0, 1fr); } }
+.leyenda { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 8px; font-size: 13px; color: var(--text-secondary); }
+.leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.leyenda i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+svg { display: block; width: 100%; overflow: visible; }
+svg text { fill: var(--text-muted); font-size: 11px; }
+.eje line, .rejilla-lineas line { stroke: var(--grid); }
+.cero { stroke: var(--text-muted); }
+.marca { stroke: var(--surface-1); stroke-width: 1; }
+.marca:hover, .marca.activa { opacity: .8; }
+.vacio { padding: 40px 0; text-align: center; color: var(--text-muted); }
+#tooltip {
+  position: fixed; z-index: 50; pointer-events: none; display: none; max-width: 320px;
+  background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 6px 24px rgba(0,0,0,.2);
+}
+#tooltip b { display: block; margin-bottom: 4px; }
+#tooltip table { border-collapse: collapse; }
+#tooltip td { padding: 1px 4px; }
+#tooltip td.n { text-align: right; font-variant-numeric: tabular-nums; }
+#tooltip i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.tabla-env { overflow: auto; max-height: 560px; border: 1px solid var(--border); border-radius: 8px; }
+table.datos { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+table.datos th, table.datos td { padding: 5px 10px; border-bottom: 1px solid var(--grid); text-align: left; white-space: nowrap; }
+table.datos th {
+  position: sticky; top: 0; background: var(--surface-1); cursor: pointer; user-select: none;
+  font-weight: 600; color: var(--text-secondary); font-size: 13px; border-bottom: 1px solid var(--border);
+}
+table.datos th.num, table.datos td.num { text-align: right; }
+table.datos th[aria-sort="ascending"]::after { content: " ▲"; }
+table.datos th[aria-sort="descending"]::after { content: " ▼"; }
+table.datos tbody tr:hover { background: var(--surface-0); }
+td .accion { border: 0; background: none; color: var(--accent); padding: 0; text-align: left; }
+td .accion:hover { text-decoration: underline; }
+.tipo { font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; color: var(--text-muted); margin-left: 6px; }
+.pestanas { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+.pestanas button[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.nota { font-size: 12px; color: var(--text-muted); margin: 8px 0 0; }
+.pos { color: var(--pos); } .neg { color: var(--neg); }
+@media (max-width: 600px) {
+  main { padding: 16px; }
+  .filtros { gap: 10px; }
+  .campo { flex: 1 1 140px; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Estadísticas de ediciones de la wiki castellana de Dead by Daylight</h1>
+  <p id="origen"></p>
+</header>
+
+<section class="panel" aria-label="Filtros">
+  <div class="filtros">
+    <label class="campo"><span>Año</span>
+      <select id="f-anio"><option value="">Todos</option></select></label>
+    <label class="campo"><span>Mes</span>
+      <select id="f-mes" disabled><option value="">Todos</option></select></label>
+    <label class="campo"><span>Desde</span><input type="date" id="f-desde"></label>
+    <label class="campo"><span>Hasta</span><input type="date" id="f-hasta"></label>
+    <div class="campo"><span>Rápido</span>
+      <div class="segmentado" id="f-rapido">
+        <button type="button" data-dias="30">30 días</button>
+        <button type="button" data-dias="90">90 días</button>
+        <button type="button" data-dias="365">12 meses</button>
+        <button type="button" data-dias="0">Todo</button>
+      </div></div>
+    <div class="campo"><span>Editores</span>
+      <div class="casillas" id="f-tipos">
+        <label><input type="checkbox" value="usuario" checked> Usuarios</label>
+        <label><input type="checkbox" value="anonimo" checked> Anónimos</label>
+        <label><input type="checkbox" value="bot"> Bots</label>
+      </div></div>
+    <div class="campo"><span>Espacios de nombres</span>
+      <details class="desplegable" id="f-ns"><summary>Todos</summary><div class="lista"></div></details></div>
+    <label class="campo"><span>Usuario</span>
+      <input id="f-usuario" list="lista-usuarios" placeholder="Escribe un nombre y pulsa Intro" autocomplete="off">
+      <datalist id="lista-usuarios"></datalist></label>
+    <div class="campo"><span>&nbsp;</span><button type="button" id="f-limpiar">Quitar filtros</button></div>
+  </div>
+  <div class="chips" id="chips-usuarios"></div>
+</section>
+
+<section class="tiles" id="tiles" aria-label="Resumen"></section>
+
+<div class="rejilla">
+  <section class="panel">
+    <h2>Evolución <small id="desc-evolucion"></small></h2>
+    <div class="filtros" style="margin-bottom:10px">
+      <div class="campo"><span>Medida</span>
+        <div class="segmentado" id="f-metrica">
+          <button type="button" data-v="ediciones" aria-pressed="true">Ediciones</button>
+          <button type="button" data-v="anadidos">Añadidos</button>
+          <button type="button" data-v="quitados">Quitados</button>
+          <button type="button" data-v="neto">Neto</button>
+        </div></div>
+      <div class="campo"><span>Agrupar por</span>
+        <div class="segmentado" id="f-grupo">
+          <button type="button" data-v="auto" aria-pressed="true">Auto</button>
+          <button type="button" data-v="anio">Año</button>
+          <button type="button" data-v="mes">Mes</button>
+          <button type="button" data-v="semana">Semana</button>
+          <button type="button" data-v="dia">Día</button>
+        </div></div>
+    </div>
+    <div class="leyenda" id="leyenda-evolucion"></div>
+    <div id="grafico-evolucion"></div>
+  </section>
+  <section class="panel">
+    <h2>Por espacio de nombres <small id="desc-ns"></small></h2>
+    <div id="grafico-ns"></div>
+  </section>
+</div>
+
+<section class="panel">
+  <h2>Detalle</h2>
+  <div class="pestanas" role="tablist" id="pestanas">
+    <button type="button" role="tab" data-t="usuarios" aria-selected="true">Usuarios</button>
+    <button type="button" role="tab" data-t="ns">Espacios de nombres</button>
+    <button type="button" role="tab" data-t="periodos">Periodos</button>
+    <button type="button" role="tab" data-t="paginas">Páginas</button>
+    <button type="button" role="tab" data-t="ultimas">Últimas ediciones</button>
+  </div>
+  <div class="tabla-env"><table class="datos" id="tabla"></table></div>
+  <p class="nota" id="nota-tabla"></p>
+</section>
+
+<p class="nota">
+  Los caracteres son la diferencia de tamaño de cada revisión respecto a la anterior de la misma página, en bytes
+  del wikitexto (las letras con tilde y la ñ ocupan 2). Una edición que añade y quita texto cuenta solo por su saldo:
+  «añadidos» suma los saldos positivos y «quitados» los negativos. No incluye las revisiones de páginas borradas.
+</p>
+</main>
+<div id="tooltip" role="tooltip"></div>
+
+<script src="datos.js"></script>
+<script>
+'use strict';
+(function () {
+const D = window.DATOS;
+if (!D) {
+  document.querySelector('main').innerHTML =
+    '<p class="vacio">No se encuentra <code>datos.js</code>. Ejecuta <code>python3 estadisticas/descargar.py</code>.</p>';
+  return;
+}
+
+// ---------- Datos ----------
+const N = D.ediciones.length;
+const T = new Float64Array(N), U = new Int32Array(N), P = new Int32Array(N), DL = new Int32Array(N),
+      CR = new Uint8Array(N), REV = new Int32Array(N);
+D.ediciones.forEach((e, i) => { T[i] = e[0] * 1000; U[i] = e[1]; P[i] = e[2]; DL[i] = e[3]; CR[i] = e[4]; REV[i] = e[5]; });
+const USU = D.usuarios.map(u => u[0]), TIPO = D.usuarios.map(u => u[1]);
+const PAG = D.paginas.map(p => p[0]), PNS = D.paginas.map(p => p[1]);
+const NOMBRE_NS = D.espacios;
+const indiceUsuario = new Map(USU.map((u, i) => [u, i]));
+const SERIES_MAX = 7;
+const COLORES = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7', '--s8'].map(v => `var(${v})`);
+
+// Color fijo por usuario: los 8 editores (no bots) con más ediciones en todo el historial.
+const totalUsuario = new Int32Array(USU.length);
+for (let i = 0; i < N; i++) totalUsuario[U[i]]++;
+const COLOR_FIJO = new Map();
+[...USU.keys()].filter(u => TIPO[u] !== 'bot').sort((a, b) => totalUsuario[b] - totalUsuario[a])
+  .slice(0, COLORES.length).forEach((u, k) => COLOR_FIJO.set(u, k));
+
+const fmt = new Intl.NumberFormat('es-ES');
+const fmtFirmado = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmt.format(Math.abs(v));
+const fmtFecha = t => new Date(t).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
+const fmtFechaHora = t => new Date(t).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const urlPagina = t => D.wiki + '/wiki/' + encodeURIComponent(t.replace(/ /g, '_')).replace(/%2F/g, '/').replace(/%3A/g, ':');
+const urlUsuario = u => D.wiki + '/wiki/Especial:Contribuciones/' + encodeURIComponent(u.replace(/ /g, '_'));
+const urlDiff = r => D.wiki + '/index.php?diff=' + r;
+const nombreNs = ns => NOMBRE_NS[ns] ?? String(ns);
+const ETIQ_TIPO = { usuario: 'usuario', anonimo: 'anónimo', bot: 'bot' };
+
+document.getElementById('origen').innerHTML =
+  `Datos de <a href="${esc(D.wiki)}/">${esc(D.wiki.replace('https://', '')) }</a> descargados el ${esc(fmtFechaHora(Date.parse(D.generado)))}: ` +
+  `${fmt.format(N)} ediciones de ${fmt.format(USU.length)} editores en ${fmt.format(PAG.length)} páginas.`;
+
+// ---------- Estado ----------
+const estado = {
+  desde: null, hasta: null,           // ms, inclusivo / exclusivo
+  tipos: new Set(['usuario', 'anonimo']),
+  ns: null,                           // null = todos; Set de números
+  usuarios: new Set(),                // índices; vacío = todos
+  metrica: 'ediciones', grupo: 'auto', pestana: 'usuarios',
+  orden: {},                          // por pestaña: {clave, desc}
+};
+
+// ---------- Controles ----------
+const $ = id => document.getElementById(id);
+const fAnio = $('f-anio'), fMes = $('f-mes'), fDesde = $('f-desde'), fHasta = $('f-hasta');
+const anioMin = new Date(T[0]).getFullYear(), anioMax = new Date(T[N - 1]).getFullYear();
+for (let a = anioMax; a >= anioMin; a--) fAnio.add(new Option(a, a));
+MESES.forEach((m, i) => fMes.add(new Option(m, i)));
+const usuariosOrdenados = [...USU.keys()].sort((a, b) => totalUsuario[b] - totalUsuario[a]);
+$('lista-usuarios').innerHTML = usuariosOrdenados.map(u => `<option value="${esc(USU[u])}">`).join('');
+
+const aISO = t => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const deISO = s => { if (!s) return null; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
+function ponerRango(desde, hasta) {
+  estado.desde = desde; estado.hasta = hasta;
+  fDesde.value = desde != null ? aISO(desde) : '';
+  fHasta.value = hasta != null ? aISO(hasta - 1) : '';
+}
+fAnio.addEventListener('change', () => {
+  fMes.disabled = !fAnio.value; if (!fAnio.value) fMes.value = '';
+  aplicarAnioMes();
+});
+fMes.addEventListener('change', aplicarAnioMes);
+function aplicarAnioMes() {
+  if (!fAnio.value) ponerRango(null, null);
+  else if (fMes.value === '') ponerRango(new Date(+fAnio.value, 0, 1).getTime(), new Date(+fAnio.value + 1, 0, 1).getTime());
+  else ponerRango(new Date(+fAnio.value, +fMes.value, 1).getTime(), new Date(+fAnio.value, +fMes.value + 1, 1).getTime());
+  actualizar();
+}
+function cambioFechas() {
+  fAnio.value = ''; fMes.value = ''; fMes.disabled = true;
+  estado.desde = deISO(fDesde.value);
+  const h = deISO(fHasta.value); estado.hasta = h != null ? h + 864e5 : null;
+  actualizar();
+}
+fDesde.addEventListener('change', cambioFechas);
+fHasta.addEventListener('change', cambioFechas);
+$('f-rapido').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const dias = +b.dataset.dias;
+  fAnio.value = ''; fMes.value = ''; fMes.disabled = true;
+  if (!dias) ponerRango(null, null);
+  else { const hoy = new Date(); const fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1).getTime(); ponerRango(fin - dias * 864e5, fin); }
+  actualizar();
+});
+$('f-tipos').addEventListener('change', () => {
+  estado.tipos = new Set([...document.querySelectorAll('#f-tipos input:checked')].map(i => i.value));
+  actualizar();
+});
+
+// Espacios de nombres presentes en los datos
+const nsPresentes = [...new Set(PNS)].sort((a, b) => a - b);
+const listaNs = document.querySelector('#f-ns .lista');
+listaNs.innerHTML = '<div class="acciones"><button type="button" data-a="todos">Todos</button>' +
+  '<button type="button" data-a="ninguno">Ninguno</button><button type="button" data-a="contenido">Solo artículos</button></div>' +
+  nsPresentes.map(ns => `<label><input type="checkbox" value="${ns}" checked> ${esc(nombreNs(ns))} <small>(${ns})</small></label>`).join('');
+function leerNs() {
+  const marcados = [...listaNs.querySelectorAll('input:checked')].map(i => +i.value);
+  estado.ns = marcados.length === nsPresentes.length ? null : new Set(marcados);
+  document.querySelector('#f-ns summary').textContent =
+    estado.ns == null ? 'Todos' : marcados.length === 1 ? nombreNs(marcados[0]) : `${marcados.length} seleccionados`;
+  actualizar();
+}
+listaNs.addEventListener('change', leerNs);
+listaNs.addEventListener('click', e => {
+  const a = e.target.dataset && e.target.dataset.a; if (!a) return;
+  listaNs.querySelectorAll('input').forEach(i => { i.checked = a === 'todos' || (a === 'contenido' && i.value === '0'); });
+  leerNs();
+});
+document.addEventListener('click', e => { const d = $('f-ns'); if (d.open && !d.contains(e.target)) d.open = false; });
+
+// Usuarios
+const fUsuario = $('f-usuario');
+function anadirUsuario(nombre) {
+  const u = indiceUsuario.get(nombre.trim());
+  if (u == null) return false;
+  estado.usuarios.add(u);
+  // Si el usuario es de un tipo excluido, se incluye ese tipo para que se vea
+  if (!estado.tipos.has(TIPO[u])) {
+    estado.tipos.add(TIPO[u]);
+    document.querySelector(`#f-tipos input[value="${TIPO[u]}"]`).checked = true;
+  }
+  return true;
+}
+fUsuario.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && anadirUsuario(fUsuario.value)) { fUsuario.value = ''; actualizar(); }
+});
+fUsuario.addEventListener('change', () => {
+  if (anadirUsuario(fUsuario.value)) { fUsuario.value = ''; actualizar(); }
+});
+$('chips-usuarios').addEventListener('click', e => {
+  const b = e.target.closest('button[data-u]'); if (!b) return;
+  estado.usuarios.delete(+b.dataset.u); actualizar();
+});
+$('f-limpiar').addEventListener('click', () => {
+  fAnio.value = ''; fMes.value = ''; fMes.disabled = true; ponerRango(null, null);
+  estado.tipos = new Set(['usuario', 'anonimo']);
+  document.querySelectorAll('#f-tipos input').forEach(i => { i.checked = i.value !== 'bot'; });
+  listaNs.querySelectorAll('input').forEach(i => { i.checked = true; });
+  estado.ns = null; document.querySelector('#f-ns summary').textContent = 'Todos';
+  estado.usuarios.clear();
+  actualizar();
+});
+
+function segmentado(id, clave) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    estado[clave] = b.dataset.v;
+    $(id).querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    actualizar();
+  });
+}
+segmentado('f-metrica', 'metrica');
+segmentado('f-grupo', 'grupo');
+$('pestanas').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  estado.pestana = b.dataset.t;
+  $('pestanas').querySelectorAll('button').forEach(x => x.setAttribute('aria-selected', x === b));
+  pintarTabla();
+});
+
+// ---------- Filtrado y agregados ----------
+let SEL = new Int32Array(0);
+function filtrar() {
+  const out = [];
+  const { desde, hasta, tipos, ns, usuarios } = estado;
+  for (let i = 0; i < N; i++) {
+    if (desde != null && T[i] < desde) continue;
+    if (hasta != null && T[i] >= hasta) continue;
+    if (!tipos.has(TIPO[U[i]])) continue;
+    if (ns && !ns.has(PNS[P[i]])) continue;
+    if (usuarios.size && !usuarios.has(U[i])) continue;
+    out.push(i);
+  }
+  SEL = Int32Array.from(out);
+}
+const valor = {
+  ediciones: () => 1,
+  anadidos: i => DL[i] > 0 ? DL[i] : 0,
+  quitados: i => DL[i] < 0 ? -DL[i] : 0,
+  neto: i => DL[i],
+};
+const NOMBRE_METRICA = { ediciones: 'ediciones', anadidos: 'caracteres añadidos', quitados: 'caracteres quitados', neto: 'caracteres netos' };
+
+function agregar(claveDe) {
+  const m = new Map();
+  for (const i of SEL) {
+    const k = claveDe(i);
+    let a = m.get(k);
+    if (!a) m.set(k, a = { clave: k, ediciones: 0, anadidos: 0, quitados: 0, neto: 0, creaciones: 0, paginas: new Set(), editores: new Set(), primera: T[i], ultima: T[i] });
+    a.ediciones++;
+    if (DL[i] > 0) a.anadidos += DL[i]; else a.quitados -= DL[i];
+    a.neto += DL[i];
+    a.creaciones += CR[i];
+    a.paginas.add(P[i]); a.editores.add(U[i]);
+    if (T[i] < a.primera) a.primera = T[i];
+    if (T[i] > a.ultima) a.ultima = T[i];
+  }
+  return [...m.values()];
+}
+
+// ---------- Periodos ----------
+function grupoEfectivo() {
+  if (estado.grupo !== 'auto') return estado.grupo;
+  if (!SEL.length) return 'mes';
+  const dias = (T[SEL[SEL.length - 1]] - T[SEL[0]]) / 864e5;
+  return dias > 365 * 4 ? 'anio' : dias > 120 ? 'mes' : dias > 31 ? 'semana' : 'dia';
+}
+function inicioPeriodo(t, g) {
+  const d = new Date(t);
+  if (g === 'anio') return new Date(d.getFullYear(), 0, 1).getTime();
+  if (g === 'mes') return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  if (g === 'semana') { const dw = (d.getDay() + 6) % 7; return new Date(d.getFullYear(), d.getMonth(), d.getDate() - dw).getTime(); }
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+function siguientePeriodo(t, g) {
+  const d = new Date(t);
+  if (g === 'anio') return new Date(d.getFullYear() + 1, 0, 1).getTime();
+  if (g === 'mes') return new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+  if (g === 'semana') return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7).getTime();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+}
+function etiquetaPeriodo(t, g, larga) {
+  const d = new Date(t);
+  if (g === 'anio') return String(d.getFullYear());
+  if (g === 'mes') return larga ? `${MESES[d.getMonth()]} de ${d.getFullYear()}` : `${MESES[d.getMonth()].slice(0, 3)} ${String(d.getFullYear()).slice(2)}`;
+  if (g === 'semana') return (larga ? 'Semana del ' : '') + d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: larga ? 'numeric' : '2-digit' });
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: larga ? 'numeric' : '2-digit' });
+}
+function periodos(g) {
+  if (!SEL.length) return [];
+  const ini = inicioPeriodo(estado.desde ?? T[SEL[0]], g);
+  const finDatos = estado.hasta != null ? estado.hasta - 1 : T[SEL[SEL.length - 1]];
+  const lista = [];
+  for (let t = ini; t <= finDatos && lista.length < 5000; t = siguientePeriodo(t, g)) lista.push(t);
+  return lista;
+}
+
+// ---------- Tooltip ----------
+const tip = $('tooltip');
+function mostrarTip(html, e) {
+  tip.innerHTML = html; tip.style.display = 'block';
+  const r = tip.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = innerHeight - r.height - 8;
+  tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px';
+}
+const ocultarTip = () => { tip.style.display = 'none'; };
+
+// ---------- Escalas ----------
+function ticksBonitos(min, max, n) {
+  if (min === max) { max = min + 1; }
+  const paso0 = (max - min) / n, mag = 10 ** Math.floor(Math.log10(paso0)), r = paso0 / mag;
+  const paso = (r >= 5 ? 10 : r >= 2 ? 5 : r >= 1 ? 2 : 1) * mag;
+  const ticks = [];
+  for (let v = Math.floor(min / paso) * paso; v <= max + paso * 1e-9; v += paso) ticks.push(Math.round(v / paso) * paso);
+  if (ticks[ticks.length - 1] < max) ticks.push(ticks[ticks.length - 1] + paso);
+  return ticks;
+}
+const compacto = new Intl.NumberFormat('es-ES', { notation: 'compact', maximumFractionDigits: 1 });
+
+// ---------- Gráfico de evolución ----------
+let seriesActuales = [];
+function colorDeSerie(series) {
+  // Los usuarios con color fijo lo conservan; el resto toma los huecos libres en orden.
+  const usados = new Set(series.filter(u => COLOR_FIJO.has(u)).map(u => COLOR_FIJO.get(u)));
+  const libres = [...COLORES.keys()].filter(k => !usados.has(k));
+  const mapa = new Map();
+  series.forEach(u => mapa.set(u, COLOR_FIJO.has(u) ? COLORES[COLOR_FIJO.get(u)] : COLORES[libres.shift() ?? 7]));
+  return mapa;
+}
+function pintarEvolucion() {
+  const cont = $('grafico-evolucion'), leyenda = $('leyenda-evolucion');
+  const g = grupoEfectivo(), met = estado.metrica, val = valor[met];
+  const lista = periodos(g);
+  $('desc-evolucion').textContent = `${NOMBRE_METRICA[met]} por ${{ anio: 'año', mes: 'mes', semana: 'semana', dia: 'día' }[g]}`;
+  if (!lista.length) { cont.innerHTML = '<p class="vacio">No hay ediciones con estos filtros.</p>'; leyenda.innerHTML = ''; seriesActuales = []; return; }
+
+  // Series: los usuarios elegidos o los que más aportan con la medida actual
+  const porUsuario = new Map();
+  for (const i of SEL) porUsuario.set(U[i], (porUsuario.get(U[i]) || 0) + Math.abs(val(i)));
+  let series = [...porUsuario.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]);
+  const hayOtros = series.length > SERIES_MAX;
+  series = series.slice(0, SERIES_MAX);
+  const colores = colorDeSerie(series);
+  const OTROS = -1;
+  const idx = new Map(series.map((u, k) => [u, k]));
+  const nS = series.length + (hayOtros ? 1 : 0);
+  const pos = new Map(lista.map((t, k) => [t, k]));
+  const matriz = lista.map(() => new Float64Array(nS));
+  const edPeriodo = new Int32Array(lista.length);
+  for (const i of SEL) {
+    const k = pos.get(inicioPeriodo(T[i], g)); if (k == null) continue;
+    const s = idx.has(U[i]) ? idx.get(U[i]) : nS - 1;
+    matriz[k][s] += val(i); edPeriodo[k]++;
+  }
+  const claves = [...series, ...(hayOtros ? [OTROS] : [])];
+  const colorDe = s => s === OTROS ? 'var(--otros)' : colores.get(s);
+  const nombreDe = s => s === OTROS ? 'Otros' : USU[s];
+  seriesActuales = claves;
+  leyenda.innerHTML = claves.map(s => `<span><i style="background:${colorDe(s)}"></i>${esc(nombreDe(s))}</span>`).join('');
+
+  let maxV = 0, minV = 0;
+  matriz.forEach(fila => {
+    let p = 0, n = 0; fila.forEach(v => { if (v > 0) p += v; else n += v; });
+    maxV = Math.max(maxV, p); minV = Math.min(minV, n);
+  });
+  const W = Math.max(280, cont.clientWidth), H = 320, mI = 52, mD = 8, mS = 10, mInf = 34;
+  const ticks = ticksBonitos(minV, maxV || 1, 5);
+  const y0 = ticks[0], y1 = ticks[ticks.length - 1];
+  const y = v => mS + (H - mS - mInf) * (1 - (v - y0) / (y1 - y0));
+  const banda = (W - mI - mD) / lista.length;
+  const hueco = banda > 6 ? Math.min(banda * 0.2, 12) : 0;
+  const ancho = Math.max(1, banda - hueco);
+  const r = Math.min(4, ancho / 2);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Gráfico de ${esc(NOMBRE_METRICA[met])}"><g class="rejilla-lineas">`;
+  ticks.forEach(t => { svg += `<line x1="${mI}" x2="${W - mD}" y1="${y(t)}" y2="${y(t)}"/><text x="${mI - 6}" y="${y(t) + 4}" text-anchor="end">${compacto.format(t)}</text>`; });
+  svg += '</g>';
+  // Etiquetas del eje X sin solaparse
+  const cada = Math.max(1, Math.ceil(60 / banda));
+  lista.forEach((t, k) => {
+    if (k % cada) return;
+    svg += `<text x="${mI + banda * k + banda / 2}" y="${H - mInf + 16}" text-anchor="middle">${esc(etiquetaPeriodo(t, g))}</text>`;
+  });
+  // Barras apiladas: positivos hacia arriba, negativos hacia abajo
+  const redondeo = (x, yA, w, h, arriba) => {
+    if (h <= 0) return '';
+    const rr = Math.min(r, h);
+    return arriba
+      ? `M${x},${yA + h}V${yA + rr}Q${x},${yA} ${x + rr},${yA}H${x + w - rr}Q${x + w},${yA} ${x + w},${yA + rr}V${yA + h}Z`
+      : `M${x},${yA}V${yA + h - rr}Q${x},${yA + h} ${x + rr},${yA + h}H${x + w - rr}Q${x + w},${yA + h} ${x + w},${yA + h - rr}V${yA}Z`;
+  };
+  matriz.forEach((fila, k) => {
+    const x = mI + banda * k + hueco / 2;
+    let accP = 0, accN = 0;
+    const ultP = fila.reduce((u, v, s) => v > 0 ? s : u, -1), ultN = fila.reduce((u, v, s) => v < 0 ? s : u, -1);
+    fila.forEach((v, s) => {
+      if (!v) return;
+      let yA, h, arriba = v > 0;
+      if (arriba) { yA = y(accP + v); h = y(accP) - yA; accP += v; } else { yA = y(accN); h = y(accN + v) - yA; accN += v; }
+      const forma = (arriba ? s === ultP : s === ultN) ? redondeo(x, yA, ancho, h, arriba)
+        : `M${x},${yA}h${ancho}v${h}h${-ancho}Z`;
+      svg += `<path class="marca" d="${forma}" fill="${colorDe(claves[s])}" data-k="${k}"/>`;
+    });
+    // Zona de interacción de todo el periodo
+    svg += `<rect x="${mI + banda * k}" y="${mS}" width="${banda}" height="${H - mS - mInf}" fill="transparent" data-k="${k}" class="zona"/>`;
+  });
+  if (minV < 0) svg += `<line class="cero" x1="${mI}" x2="${W - mD}" y1="${y(0)}" y2="${y(0)}"/>`;
+  svg += '</svg>';
+  cont.innerHTML = svg;
+  const fmtV = met === 'neto' ? fmtFirmado : v => fmt.format(v);
+  cont.querySelectorAll('.zona').forEach(z => {
+    z.addEventListener('mousemove', e => {
+      const k = +z.dataset.k, fila = matriz[k];
+      const filas = claves.map((s, j) => [s, fila[j]]).filter(f => f[1]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+      const total = fila.reduce((a, b) => a + b, 0);
+      mostrarTip(`<b>${esc(etiquetaPeriodo(lista[k], g, true))}</b>` +
+        `<table>${filas.map(([s, v]) => `<tr><td><i style="background:${colorDe(s)}"></i></td><td>${esc(nombreDe(s))}</td><td class="n">${fmtV(v)}</td></tr>`).join('')}` +
+        `<tr><td></td><td><b style="margin:0">Total</b></td><td class="n"><b style="margin:0">${fmtV(total)}</b></td></tr></table>` +
+        (met !== 'ediciones' ? `<div class="nota" style="margin:4px 0 0">${fmt.format(edPeriodo[k])} ediciones</div>` : '') +
+        `<div class="nota" style="margin:4px 0 0">Pulsa para filtrar este periodo</div>`, e);
+    });
+    z.addEventListener('mouseleave', ocultarTip);
+    z.addEventListener('click', () => {
+      ocultarTip();
+      fAnio.value = ''; fMes.value = ''; fMes.disabled = true;
+      ponerRango(lista[+z.dataset.k], siguientePeriodo(lista[+z.dataset.k], g));
+      actualizar();
+    });
+  });
+}
+
+// ---------- Gráfico por espacio de nombres ----------
+function pintarNs() {
+  const cont = $('grafico-ns'), met = estado.metrica;
+  const filas = agregar(i => PNS[P[i]]).filter(a => a[met]).sort((a, b) => Math.abs(b[met]) - Math.abs(a[met])).slice(0, 12);
+  $('desc-ns').textContent = NOMBRE_METRICA[met];
+  if (!filas.length) { cont.innerHTML = '<p class="vacio">Sin datos.</p>'; return; }
+  const W = Math.max(260, cont.clientWidth), fila = 26, H = filas.length * fila + 6;
+  const etiq = Math.min(130, W * 0.38), mD = 56;
+  const minV = Math.min(0, ...filas.map(f => f[met])), maxV = Math.max(0, ...filas.map(f => f[met]));
+  const x = v => etiq + (W - etiq - mD) * (v - minV) / ((maxV - minV) || 1);
+  const fmtV = met === 'neto' ? fmtFirmado : v => fmt.format(v);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Gráfico por espacio de nombres">`;
+  filas.forEach((f, k) => {
+    const yy = k * fila + 3, v = f[met], xa = Math.min(x(0), x(v)), w = Math.max(1, Math.abs(x(v) - x(0)));
+    const nombre = nombreNs(f.clave);
+    const recorte = nombre.length > 18 ? nombre.slice(0, 17) + '…' : nombre;
+    svg += `<text x="${etiq - 8}" y="${yy + 15}" text-anchor="end" style="fill:var(--text-secondary)">${esc(recorte)}</text>`;
+    const rr = Math.min(4, w / 2), h = fila - 8;
+    const d = v >= 0
+      ? `M${xa},${yy}H${xa + w - rr}Q${xa + w},${yy} ${xa + w},${yy + rr}V${yy + h - rr}Q${xa + w},${yy + h} ${xa + w - rr},${yy + h}H${xa}Z`
+      : `M${xa + w},${yy}H${xa + rr}Q${xa},${yy} ${xa},${yy + rr}V${yy + h - rr}Q${xa},${yy + h} ${xa + rr},${yy + h}H${xa + w}Z`;
+    svg += `<path d="${d}" fill="${v < 0 ? 'var(--neg)' : 'var(--accent)'}"/>`;
+    svg += `<text x="${v >= 0 ? xa + w + 6 : xa - 6}" y="${yy + 15}" text-anchor="${v >= 0 ? 'start' : 'end'}">${compacto.format(v)}</text>`;
+    svg += `<rect x="0" y="${yy - 3}" width="${W}" height="${fila}" fill="transparent" class="zona-ns" data-k="${k}"/>`;
+  });
+  svg += '</svg>';
+  cont.innerHTML = svg;
+  cont.querySelectorAll('.zona-ns').forEach(z => {
+    const f = filas[+z.dataset.k];
+    z.addEventListener('mousemove', e => mostrarTip(`<b>${esc(nombreNs(f.clave))}</b><table>` +
+      `<tr><td>Ediciones</td><td class="n">${fmt.format(f.ediciones)}</td></tr>` +
+      `<tr><td>Añadidos</td><td class="n">${fmt.format(f.anadidos)}</td></tr>` +
+      `<tr><td>Quitados</td><td class="n">${fmt.format(f.quitados)}</td></tr>` +
+      `<tr><td>Neto</td><td class="n">${fmtFirmado(f.neto)}</td></tr>` +
+      `<tr><td>Páginas</td><td class="n">${fmt.format(f.paginas.size)}</td></tr></table>` +
+      `<div class="nota" style="margin:4px 0 0">Pulsa para ver solo este espacio</div>`, e));
+    z.addEventListener('mouseleave', ocultarTip);
+    z.style.cursor = 'pointer';
+    z.addEventListener('click', () => {
+      ocultarTip();
+      listaNs.querySelectorAll('input').forEach(i => { i.checked = +i.value === f.clave; });
+      leerNs();
+    });
+  });
+}
+
+// ---------- Resumen ----------
+function pintarTiles() {
+  let ed = 0, add = 0, rem = 0, cre = 0, bots = 0;
+  const eds = new Set(), pags = new Set();
+  for (const i of SEL) {
+    ed++; if (DL[i] > 0) add += DL[i]; else rem -= DL[i];
+    cre += CR[i]; eds.add(U[i]); pags.add(P[i]); if (TIPO[U[i]] === 'bot') bots++;
+  }
+  const rango = SEL.length ? `${fmtFecha(T[SEL[0]])} – ${fmtFecha(T[SEL[SEL.length - 1]])}` : '';
+  const tile = (etq, val, sub = '') => `<div class="tile"><div class="etq">${etq}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
+  $('tiles').innerHTML =
+    tile('Ediciones', fmt.format(ed), rango) +
+    tile('Editores', fmt.format(eds.size), bots ? `${fmt.format(bots)} ediciones de bots` : '') +
+    tile('Páginas editadas', fmt.format(pags.size), `${fmt.format(cre)} creadas`) +
+    tile('Caracteres añadidos', `<span class="pos">${fmt.format(add)}</span>`) +
+    tile('Caracteres quitados', `<span class="neg">${fmt.format(rem)}</span>`) +
+    tile('Saldo neto', fmtFirmado(add - rem));
+  $('chips-usuarios').innerHTML = [...estado.usuarios].map(u =>
+    `<span class="chip">${esc(USU[u])}<button type="button" data-u="${u}" aria-label="Quitar ${esc(USU[u])}">×</button></span>`).join('');
+}
+
+// ---------- Tablas ----------
+const COL_NUM = [
+  { k: 'ediciones', t: 'Ediciones' },
+  { k: 'anadidos', t: 'Añadidos', c: 'pos' },
+  { k: 'quitados', t: 'Quitados', c: 'neg' },
+  { k: 'neto', t: 'Neto', f: fmtFirmado },
+  { k: 'creaciones', t: 'Creaciones' },
+];
+function definicionTabla() {
+  switch (estado.pestana) {
+    case 'usuarios': return {
+      filas: agregar(i => U[i]).map(a => ({ ...a, nombre: USU[a.clave], npag: a.paginas.size })),
+      cols: [
+        { k: 'nombre', t: 'Usuario', html: a => `<button type="button" class="accion" data-filtrar-u="${a.clave}" title="Filtrar por este usuario">${esc(a.nombre)}</button><span class="tipo">${ETIQ_TIPO[TIPO[a.clave]]}</span> <a href="${esc(urlUsuario(a.nombre))}" target="_blank" rel="noopener" title="Contribuciones en la wiki">↗</a>` },
+        ...COL_NUM, { k: 'npag', t: 'Páginas' },
+        { k: 'primera', t: 'Primera', f: fmtFecha }, { k: 'ultima', t: 'Última', f: fmtFecha },
+      ], orden: { k: 'ediciones', d: true },
+    };
+    case 'ns': return {
+      filas: agregar(i => PNS[P[i]]).map(a => ({ ...a, nombre: nombreNs(a.clave), npag: a.paginas.size, neds: a.editores.size })),
+      cols: [{ k: 'nombre', t: 'Espacio de nombres' }, { k: 'clave', t: 'Núm.' }, ...COL_NUM, { k: 'npag', t: 'Páginas' }, { k: 'neds', t: 'Editores' }],
+      orden: { k: 'ediciones', d: true },
+    };
+    case 'periodos': {
+      const g = grupoEfectivo();
+      return {
+        filas: agregar(i => inicioPeriodo(T[i], g)).map(a => ({ ...a, nombre: etiquetaPeriodo(a.clave, g, true), npag: a.paginas.size, neds: a.editores.size })),
+        cols: [{ k: 'clave', t: 'Periodo', f: (v, a) => a.nombre }, ...COL_NUM, { k: 'npag', t: 'Páginas' }, { k: 'neds', t: 'Editores' }],
+        orden: { k: 'clave', d: true },
+      };
+    }
+    case 'paginas': return {
+      filas: agregar(i => P[i]).map(a => ({ ...a, nombre: PAG[a.clave], ns: nombreNs(PNS[a.clave]), neds: a.editores.size })),
+      cols: [
+        { k: 'nombre', t: 'Página', html: a => `<a href="${esc(urlPagina(a.nombre))}" target="_blank" rel="noopener">${esc(a.nombre)}</a>` },
+        { k: 'ns', t: 'Espacio' }, ...COL_NUM, { k: 'neds', t: 'Editores' }, { k: 'ultima', t: 'Última', f: fmtFecha },
+      ], orden: { k: 'ediciones', d: true }, limite: 500,
+    };
+    case 'ultimas': {
+      const filas = [];
+      for (let j = SEL.length - 1; j >= 0 && filas.length < 500; j--) {
+        const i = SEL[j];
+        filas.push({ t: T[i], nombre: USU[U[i]], u: U[i], pagina: PAG[P[i]], ns: nombreNs(PNS[P[i]]), delta: DL[i], creacion: CR[i] ? 'sí' : '', rev: REV[i] });
+      }
+      return {
+        filas,
+        cols: [
+          { k: 't', t: 'Fecha', html: a => `<a href="${esc(urlDiff(a.rev))}" target="_blank" rel="noopener">${esc(fmtFechaHora(a.t))}</a>` },
+          { k: 'nombre', t: 'Usuario', html: a => `<button type="button" class="accion" data-filtrar-u="${a.u}">${esc(a.nombre)}</button>` },
+          { k: 'pagina', t: 'Página', html: a => `<a href="${esc(urlPagina(a.pagina))}" target="_blank" rel="noopener">${esc(a.pagina)}</a>` },
+          { k: 'ns', t: 'Espacio' }, { k: 'delta', t: 'Caracteres', f: fmtFirmado, num: true }, { k: 'creacion', t: 'Creación' },
+        ], orden: { k: 't', d: true }, nota: 'Las 500 ediciones más recientes que cumplen los filtros.',
+      };
+    }
+  }
+}
+function pintarTabla() {
+  const def = definicionTabla(), tabla = $('tabla');
+  const orden = estado.orden[estado.pestana] || def.orden;
+  const col = def.cols.find(c => c.k === orden.k);
+  const esNum = c => c.num ?? (def.filas.length ? typeof def.filas[0][c.k] === 'number' : false);
+  const filas = def.filas.slice().sort((a, b) => {
+    const va = a[orden.k], vb = b[orden.k];
+    const r = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), 'es', { sensitivity: 'base' });
+    return orden.d ? -r : r;
+  });
+  const visibles = def.limite ? filas.slice(0, def.limite) : filas;
+  tabla.innerHTML = '<thead><tr>' + def.cols.map(c =>
+    `<th scope="col" data-k="${c.k}" class="${esNum(c) && c.k !== 'clave' || c.num ? 'num' : ''}" aria-sort="${c === col ? (orden.d ? 'descending' : 'ascending') : 'none'}">${c.t}</th>`).join('') +
+    '</tr></thead><tbody>' + visibles.map(a => '<tr>' + def.cols.map(c => {
+      const v = a[c.k];
+      const cont = c.html ? c.html(a) : c.f ? esc(c.f(v, a)) : typeof v === 'number' ? esc(fmt.format(v)) : esc(v);
+      const clase = [(esNum(c) && c.k !== 'clave') || c.num ? 'num' : '', c.c && v ? c.c : ''].join(' ').trim();
+      return `<td class="${clase}">${cont}</td>`;
+    }).join('') + '</tr>').join('') + '</tbody>';
+  if (!visibles.length) tabla.innerHTML += `<tbody><tr><td colspan="${def.cols.length}" class="vacio">No hay datos con estos filtros.</td></tr></tbody>`;
+  $('nota-tabla').textContent = def.nota || (def.limite && filas.length > def.limite
+    ? `Se muestran ${fmt.format(def.limite)} de ${fmt.format(filas.length)} filas según el orden elegido.` : `${fmt.format(filas.length)} filas. Pulsa en un encabezado para ordenar.`);
+}
+$('tabla').addEventListener('click', e => {
+  const th = e.target.closest('th');
+  if (th) {
+    const k = th.dataset.k, actual = estado.orden[estado.pestana] || definicionTabla().orden;
+    estado.orden[estado.pestana] = { k, d: actual.k === k ? !actual.d : !['nombre', 'pagina', 'ns'].includes(k) };
+    pintarTabla(); return;
+  }
+  const b = e.target.closest('[data-filtrar-u]');
+  if (b) { anadirUsuario(USU[+b.dataset.filtrarU]); actualizar(); }
+});
+
+// ---------- Estado en la URL ----------
+function guardarHash() {
+  const p = new URLSearchParams();
+  if (estado.desde != null) p.set('desde', aISO(estado.desde));
+  if (estado.hasta != null) p.set('hasta', aISO(estado.hasta - 1));
+  p.set('tipos', [...estado.tipos].join(','));
+  if (estado.ns) p.set('ns', [...estado.ns].join(','));
+  if (estado.usuarios.size) p.set('u', [...estado.usuarios].map(u => USU[u]).join('|'));
+  if (estado.metrica !== 'ediciones') p.set('medida', estado.metrica);
+  if (estado.grupo !== 'auto') p.set('grupo', estado.grupo);
+  history.replaceState(null, '', '#' + p.toString());
+}
+function leerHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (!p.toString()) return;
+  const d = deISO(p.get('desde')), h = deISO(p.get('hasta'));
+  ponerRango(d, h != null ? h + 864e5 : null);
+  if (p.has('tipos')) {
+    estado.tipos = new Set(p.get('tipos').split(',').filter(Boolean));
+    document.querySelectorAll('#f-tipos input').forEach(i => { i.checked = estado.tipos.has(i.value); });
+  }
+  if (p.has('ns')) {
+    const s = new Set(p.get('ns').split(',').map(Number));
+    listaNs.querySelectorAll('input').forEach(i => { i.checked = s.has(+i.value); });
+    const m = [...listaNs.querySelectorAll('input:checked')].map(i => +i.value);
+    estado.ns = new Set(m);
+    document.querySelector('#f-ns summary').textContent = m.length === 1 ? nombreNs(m[0]) : `${m.length} seleccionados`;
+  }
+  if (p.has('u')) p.get('u').split('|').forEach(anadirUsuario);
+  for (const [clave, id, param] of [['metrica', 'f-metrica', 'medida'], ['grupo', 'f-grupo', 'grupo']]) {
+    if (!p.has(param)) continue;
+    estado[clave] = p.get(param);
+    $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === estado[clave]));
+  }
+}
+
+// ---------- Ciclo ----------
+function actualizar() {
+  filtrar();
+  pintarTiles();
+  pintarEvolucion();
+  pintarNs();
+  pintarTabla();
+  guardarHash();
+}
+let temporizador;
+addEventListener('resize', () => { clearTimeout(temporizador); temporizador = setTimeout(() => { pintarEvolucion(); pintarNs(); }, 150); });
+leerHash();
+actualizar();
+})();
+</script>
+</body>
+</html>
